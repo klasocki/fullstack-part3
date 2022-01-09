@@ -14,8 +14,8 @@ console.log(url)
 mongoose.connect(url)
 
 const personSchema = new mongoose.Schema({
-    name: String,
-    number: String,
+    name: {type: String, minLength: 3, required: true},
+    number: {type: String, minLength: 8, required: true},
 })
 
 const Person = mongoose.model('Person', personSchema)
@@ -27,14 +27,13 @@ if (process.argv.length < 5) {
         })
         mongoose.connection.close()
     })
-}
-else {
+} else {
     const person = new Person({
         name: process.argv[3],
         number: process.argv[4],
     })
 
-    person.save().then(result => {
+    person.save().then(() => {
         console.log('person saved!')
         mongoose.connection.close()
     })

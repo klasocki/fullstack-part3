@@ -27,24 +27,16 @@ app.get('/api/persons', (request, response) => {
 
 app.get('/info', (request, response) => {
     Person.count({}).then(
-        count =>response.send(`<p>Phonebook has info for ${count} people</p><p>${new Date()}</p>`)
+        count => response.send(`<p>Phonebook has info for ${count} people</p><p>${new Date()}</p>`)
     )
 })
 
-app.post('/api/persons', (request, response) => {
+app.post('/api/persons', (request, response, next) => {
     const body = request.body
-    if (!body.name || !body.number) {
-        return response.status(400).json({
-            error: 'name or number is missing'
-        })
-    }
-    // if (persons.find(p => person.name === p.name)) {
-    //     return response.status(400).json({
-    //         error: `${person.name} is already in the phonebook`
-    //     })
-    // }
     const person = new Person(body)
-    person.save().then(savedPerson => response.json(savedPerson))
+    person.save()
+        .then(savedPerson => response.json(savedPerson.toJSON()))
+        .catch(error => next(error))
 })
 
 app.get('/api/persons/:id', (request, response, next) => {
@@ -61,7 +53,7 @@ app.get('/api/persons/:id', (request, response, next) => {
 
 app.delete('/api/persons/:id', (request, response, next) => {
     Person.findByIdAndRemove(request.params.id)
-        .then(result => {
+        .then(() => {
             response.status(204).end()
         })
         .catch(error => next(error))
@@ -71,7 +63,7 @@ app.delete('/api/persons/:id', (request, response, next) => {
 app.put('/api/persons/:id', (request, response, next) => {
     const person = request.body
 
-    Person.findByIdAndUpdate(request.params.id, person, {new: true})
+    Person.findByIdAndUpdate(request.params.id, person, {new: true, runValidators: true})
         .then(updatedPerson => {
             response.json(updatedPerson)
         })
@@ -91,8 +83,9 @@ const errorHandler = (error, request, response, next) => {
 
     if (error.name === 'CastError') {
         return response.status(400).send({error: 'malformatted id'})
+    } else if (error.name === 'ValidationError' || error.name === 'MongoServerError') {
+        return response.status(400).json({error: error.message})
     }
-
     next(error)
 }
 
